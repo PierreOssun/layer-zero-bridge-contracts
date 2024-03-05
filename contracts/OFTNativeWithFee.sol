@@ -1,4 +1,81 @@
-// Sources flattened with hardhat v2.10.1 https://hardhat.org
+// SPDX-License-Identifier: MIT
+// OpenZeppelin Contracts (last updated v4.9.0) (security/ReentrancyGuard.sol)
+
+pragma solidity ^0.8.0;
+
+/**
+ * @dev Contract module that helps prevent reentrant calls to a function.
+ *
+ * Inheriting from `ReentrancyGuard` will make the {nonReentrant} modifier
+ * available, which can be applied to functions to make sure there are no nested
+ * (reentrant) calls to them.
+ *
+ * Note that because there is a single `nonReentrant` guard, functions marked as
+ * `nonReentrant` may not call one another. This can be worked around by making
+ * those functions `private`, and then adding `external` `nonReentrant` entry
+ * points to them.
+ *
+ * TIP: If you would like to learn more about reentrancy and alternative ways
+ * to protect against it, check out our blog post
+ * https://blog.openzeppelin.com/reentrancy-after-istanbul/[Reentrancy After Istanbul].
+ */
+abstract contract ReentrancyGuard {
+    // Booleans are more expensive than uint256 or any type that takes up a full
+    // word because each write operation emits an extra SLOAD to first read the
+    // slot's contents, replace the bits taken up by the boolean, and then write
+    // back. This is the compiler's defense against contract upgrades and
+    // pointer aliasing, and it cannot be disabled.
+
+    // The values being non-zero value makes deployment a bit more expensive,
+    // but in exchange the refund on every call to nonReentrant will be lower in
+    // amount. Since refunds are capped to a percentage of the total
+    // transaction's gas, it is best to keep them low in cases like this one, to
+    // increase the likelihood of the full refund coming into effect.
+    uint256 private constant _NOT_ENTERED = 1;
+    uint256 private constant _ENTERED = 2;
+
+    uint256 private _status;
+
+    constructor() {
+        _status = _NOT_ENTERED;
+    }
+
+    /**
+     * @dev Prevents a contract from calling itself, directly or indirectly.
+     * Calling a `nonReentrant` function from another `nonReentrant`
+     * function is not supported. It is possible to prevent this from happening
+     * by making the `nonReentrant` function external, and making it call a
+     * `private` function that does the actual work.
+     */
+    modifier nonReentrant() {
+        _nonReentrantBefore();
+        _;
+        _nonReentrantAfter();
+    }
+
+    function _nonReentrantBefore() private {
+        // On the first call to nonReentrant, _status will be _NOT_ENTERED
+        require(_status != _ENTERED, "ReentrancyGuard: reentrant call");
+
+        // Any calls to nonReentrant after this point will fail
+        _status = _ENTERED;
+    }
+
+    function _nonReentrantAfter() private {
+        // By storing the original value once again, a refund is triggered (see
+        // https://eips.ethereum.org/EIPS/eip-2200)
+        _status = _NOT_ENTERED;
+    }
+
+    /**
+     * @dev Returns true if the reentrancy guard is currently set to "entered", which indicates there is a
+     * `nonReentrant` function in the call stack.
+     */
+    function _reentrancyGuardEntered() internal view returns (bool) {
+        return _status == _ENTERED;
+    }
+}
+
 
 // File @openzeppelin/contracts/token/ERC20/IERC20.sol@v4.9.0
 
@@ -111,7 +188,6 @@ interface IERC20Metadata is IERC20 {
 
 
 // File @openzeppelin/contracts/utils/Context.sol@v4.9.0
-
 
 // OpenZeppelin Contracts v4.4.1 (utils/Context.sol)
 
@@ -732,6 +808,7 @@ abstract contract Ownable is Context {
 
 // File contracts/lzApp/interfaces/ILayerZeroReceiver.sol
 
+
 pragma solidity >=0.5.0;
 
 interface ILayerZeroReceiver {
@@ -898,7 +975,6 @@ interface ILayerZeroEndpoint is ILayerZeroUserApplicationConfig {
 
 
 // File contracts/libraries/BytesLib.sol
-
 /*
  * @title Solidity Bytes Arrays Utils
  * @author Gonçalo Sá <goncalo.sa@consensys.net>
@@ -1389,7 +1465,6 @@ library BytesLib {
 
 // File contracts/lzApp/LzApp.sol
 
-
 pragma solidity ^0.8.0;
 
 
@@ -1703,7 +1778,6 @@ library ExcessivelySafeCall {
 
 // File contracts/lzApp/NonblockingLzApp.sol
 
-
 pragma solidity ^0.8.0;
 
 
@@ -1857,7 +1931,6 @@ interface ICommonOFT is IERC165 {
 
 // File contracts/token/oft/v2/interfaces/IOFTReceiverV2.sol
 
-
 pragma solidity >=0.5.0;
 
 interface IOFTReceiverV2 {
@@ -1875,7 +1948,6 @@ interface IOFTReceiverV2 {
 
 
 // File contracts/token/oft/v2/OFTCoreV2.sol
-
 pragma solidity ^0.8.0;
 
 
@@ -2276,6 +2348,7 @@ abstract contract Fee is Ownable {
 
 
 // File @openzeppelin/contracts/utils/introspection/ERC165.sol@v4.9.0
+
 // OpenZeppelin Contracts v4.4.1 (utils/introspection/ERC165.sol)
 
 pragma solidity ^0.8.0;
@@ -2311,7 +2384,8 @@ pragma solidity ^0.8.0;
 
 
 
-abstract contract BaseOFTWithFee is OFTCoreV2, Fee, ERC165, IOFTWithFee {
+
+abstract contract BaseOFTWithFee is OFTCoreV2, Fee, ERC165, IOFTWithFee, Pausable {
 
     constructor(uint8 _sharedDecimals, address _lzEndpoint) OFTCoreV2(_sharedDecimals, _lzEndpoint) {
     }
@@ -2319,13 +2393,13 @@ abstract contract BaseOFTWithFee is OFTCoreV2, Fee, ERC165, IOFTWithFee {
     /************************************************************************
     * public functions
     ************************************************************************/
-    function sendFrom(address _from, uint16 _dstChainId, bytes32 _toAddress, uint _amount, uint _minAmount, LzCallParams calldata _callParams) public payable virtual override {
+    function sendFrom(address _from, uint16 _dstChainId, bytes32 _toAddress, uint _amount, uint _minAmount, LzCallParams calldata _callParams) public payable virtual override whenNotPaused {
         (_amount,) = _payOFTFee(_from, _dstChainId, _amount);
         _amount = _send(_from, _dstChainId, _toAddress, _amount, _callParams.refundAddress, _callParams.zroPaymentAddress, _callParams.adapterParams);
         require(_amount >= _minAmount, "BaseOFTWithFee: amount is less than minAmount");
     }
 
-    function sendAndCall(address _from, uint16 _dstChainId, bytes32 _toAddress, uint _amount, uint _minAmount, bytes calldata _payload, uint64 _dstGasForCall, LzCallParams calldata _callParams) public payable virtual override {
+    function sendAndCall(address _from, uint16 _dstChainId, bytes32 _toAddress, uint _amount, uint _minAmount, bytes calldata _payload, uint64 _dstGasForCall, LzCallParams calldata _callParams) public payable virtual override whenNotPaused {
         (_amount,) = _payOFTFee(_from, _dstChainId, _amount);
         _amount = _sendAndCall(_from, _dstChainId, _toAddress, _amount, _payload, _dstGasForCall, _callParams.refundAddress, _callParams.zroPaymentAddress, _callParams.adapterParams);
         require(_amount >= _minAmount, "BaseOFTWithFee: amount is less than minAmount");
@@ -2357,7 +2431,6 @@ abstract contract BaseOFTWithFee is OFTCoreV2, Fee, ERC165, IOFTWithFee {
 // File contracts/token/oft/v2/fee/OFTWithFee.sol
 
 pragma solidity ^0.8.0;
-
 
 
 contract OFTWithFee is BaseOFTWithFee, ERC20Pausable {
@@ -2414,5 +2487,154 @@ contract OFTWithFee is BaseOFTWithFee, ERC20Pausable {
 
     function unpause() public onlyOwner {
         _unpause();
+    }
+}
+
+
+// File contracts/token/oft/v2/fee/NativeOFTWithFee.sol
+
+pragma solidity ^0.8.0;
+
+
+contract NativeOFTWithFee is OFTWithFee, ReentrancyGuard {
+    uint public outboundAmount;
+
+    event Deposit(address indexed _dst, uint _amount);
+    event Withdrawal(address indexed _src, uint _amount);
+
+    constructor(string memory _name, string memory _symbol, uint8 _sharedDecimals, address _lzEndpoint) OFTWithFee(_name, _symbol, _sharedDecimals, _lzEndpoint) {}
+
+    function deposit() public payable {
+        _mint(msg.sender, msg.value);
+        emit Deposit(msg.sender, msg.value);
+    }
+
+    function withdraw(uint _amount) external nonReentrant {
+        require(balanceOf(msg.sender) >= _amount, "NativeOFTWithFee: Insufficient balance.");
+        _burn(msg.sender, _amount);
+        (bool success, ) = msg.sender.call{value: _amount}("");
+        require(success, "NativeOFTWithFee: failed to unwrap");
+        emit Withdrawal(msg.sender, _amount);
+    }
+
+    /************************************************************************
+    * public functions
+    ************************************************************************/
+    function sendFrom(address _from, uint16 _dstChainId, bytes32 _toAddress, uint _amount, uint _minAmount, LzCallParams calldata _callParams) public payable virtual override {
+        _amount = _send(_from, _dstChainId, _toAddress, _amount, _callParams.refundAddress, _callParams.zroPaymentAddress, _callParams.adapterParams);
+        require(_amount >= _minAmount, "NativeOFTWithFee: amount is less than minAmount");
+    }
+
+    function sendAndCall(address _from, uint16 _dstChainId, bytes32 _toAddress, uint _amount, uint _minAmount, bytes calldata _payload, uint64 _dstGasForCall, LzCallParams calldata _callParams) public payable virtual override {
+        _amount = _sendAndCall(_from, _dstChainId, _toAddress, _amount, _payload, _dstGasForCall, _callParams.refundAddress, _callParams.zroPaymentAddress, _callParams.adapterParams);
+        require(_amount >= _minAmount, "NativeOFTWithFee: amount is less than minAmount");
+    }
+
+    function _send(address _from, uint16 _dstChainId, bytes32 _toAddress, uint _amount, address payable _refundAddress, address _zroPaymentAddress, bytes memory _adapterParams) internal virtual override returns (uint amount) {
+        _checkGasLimit(_dstChainId, PT_SEND, _adapterParams, NO_EXTRA_GAS);
+
+        uint messageFee;
+        (messageFee, amount) = _debitFromNative(_from, _amount, _dstChainId);
+
+        bytes memory lzPayload = _encodeSendPayload(_toAddress, _ld2sd(amount));
+        _lzSend(_dstChainId, lzPayload, _refundAddress, _zroPaymentAddress, _adapterParams, messageFee);
+
+        emit SendToChain(_dstChainId, _from, _toAddress, amount);
+    }
+
+    function _sendAndCall(address _from, uint16 _dstChainId, bytes32 _toAddress, uint _amount, bytes memory _payload, uint64 _dstGasForCall, address payable _refundAddress, address _zroPaymentAddress, bytes memory _adapterParams) internal virtual override returns (uint amount) {
+        _checkGasLimit(_dstChainId, PT_SEND_AND_CALL, _adapterParams, _dstGasForCall);
+
+        uint messageFee;
+        (messageFee, amount) = _debitFromNative(_from, _amount, _dstChainId);
+
+        // encode the msg.sender into the payload instead of _from
+        bytes memory lzPayload = _encodeSendAndCallPayload(msg.sender, _toAddress, _ld2sd(amount), _payload, _dstGasForCall);
+        _lzSend(_dstChainId, lzPayload, _refundAddress, _zroPaymentAddress, _adapterParams, messageFee);
+
+        emit SendToChain(_dstChainId, _from, _toAddress, amount);
+    }
+
+    function _debitFromNative(address _from, uint _amount, uint16 _dstChainId) internal returns (uint messageFee, uint amount) {
+        uint fee = quoteOFTFee(_dstChainId, _amount);
+        uint newMsgValue = msg.value;
+
+        if(fee > 0) {
+            // subtract fee from _amount
+            _amount -= fee;
+
+            // pay fee and update newMsgValue
+            if(balanceOf(_from) >= fee) {
+                _transferFrom(_from, feeOwner, fee);
+            } else {
+                _mint(feeOwner, fee);
+                newMsgValue -= fee;
+            }
+        }
+
+        (amount,) = _removeDust(_amount);
+        require(amount > 0, "NativeOFTWithFee: amount too small");
+        outboundAmount += amount;
+        messageFee = msg.sender == _from ? _debitMsgSender(amount, newMsgValue) : _debitMsgFrom(_from, amount, newMsgValue);
+    }
+
+    function _debitMsgSender(uint _amount, uint currentMsgValue) internal returns (uint messageFee) {
+        uint msgSenderBalance = balanceOf(msg.sender);
+
+        if (msgSenderBalance < _amount) {
+            require(msgSenderBalance + currentMsgValue >= _amount, "NativeOFTWithFee: Insufficient msg.value");
+
+            // user can cover difference with additional msg.value ie. wrapping
+            uint mintAmount = _amount - msgSenderBalance;
+
+            _mint(address(msg.sender), mintAmount);
+
+            // update the messageFee to take out mintAmount
+            messageFee = currentMsgValue - mintAmount;
+        } else {
+            messageFee = currentMsgValue;
+        }
+
+        _transfer(msg.sender, address(this), _amount);
+        return messageFee;
+    }
+
+    function _debitMsgFrom(address _from, uint _amount, uint currentMsgValue) internal returns (uint messageFee) {
+        uint msgFromBalance = balanceOf(_from);
+
+        if (msgFromBalance < _amount) {
+            require(msgFromBalance + currentMsgValue >= _amount, "NativeOFTWithFee: Insufficient msg.value");
+
+            // user can cover difference with additional msg.value ie. wrapping
+            uint mintAmount = _amount - msgFromBalance;
+            _mint(address(msg.sender), mintAmount);
+
+            // transfer the differential amount to the contract
+            _transfer(msg.sender, address(this), mintAmount);
+
+            // overwrite the _amount to take the rest of the balance from the _from address
+            _amount = msgFromBalance;
+
+            // update the messageFee to take out mintAmount
+            messageFee = currentMsgValue - mintAmount;
+        } else {
+            messageFee = currentMsgValue;
+        }
+
+        _spendAllowance(_from, msg.sender, _amount);
+        _transfer(_from, address(this), _amount);
+        return messageFee;
+    }
+
+    function _creditTo(uint16, address _toAddress, uint _amount) internal override returns(uint) {
+        outboundAmount -= _amount;
+        _burn(address(this), _amount);
+        (bool success, ) = _toAddress.call{value: _amount}("");
+        require(success, "NativeOFTWithFee: failed to _creditTo");
+        return _amount;
+    }
+
+    receive() external payable {
+        deposit();
     }
 }

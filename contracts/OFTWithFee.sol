@@ -1,8 +1,6 @@
-// Sources flattened with hardhat v2.10.1 https://hardhat.org
-
 // File @openzeppelin/contracts/token/ERC20/IERC20.sol@v4.9.0
 
- 
+// SPDX-License-Identifier: MIT
 // OpenZeppelin Contracts (last updated v4.9.0) (token/ERC20/IERC20.sol)
 
 pragma solidity ^0.8.0;
@@ -898,7 +896,6 @@ interface ILayerZeroEndpoint is ILayerZeroUserApplicationConfig {
 
 
 // File contracts/libraries/BytesLib.sol
-
 /*
  * @title Solidity Bytes Arrays Utils
  * @author Gonçalo Sá <goncalo.sa@consensys.net>
@@ -1701,7 +1698,6 @@ library ExcessivelySafeCall {
 
 
 // File contracts/lzApp/NonblockingLzApp.sol
-
 
 pragma solidity ^0.8.0;
 
